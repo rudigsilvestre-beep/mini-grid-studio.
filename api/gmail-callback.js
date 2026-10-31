@@ -29,6 +29,11 @@ module.exports=async(req,res)=>{
   const value=Buffer.concat([iv,cipher.getAuthTag(),encrypted]).toString('base64');
   const saved=await fetch(dbUrl+'/rest/v1/gmail_oauth_credentials?on_conflict=account_email',{method:'POST',headers:{apikey:dbKey,Authorization:'Bearer '+dbKey,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({account_email:sender,refresh_token_ciphertext:value,updated_at:new Date().toISOString()})});
   if(!saved.ok)throw Error('Credential storage failed '+saved.status);
+  if(payload.test===true){
+   const {sendApprovalEmail}=require('./_gmail-mailer');
+   const sent=await sendApprovalEmail('1f472fff-409f-4b20-bc5f-0af75145c49e');
+   return res.status(200).send('<html lang="pt-BR"><meta charset="utf-8"><title>Teste de e-mail</title><body style="font:18px Arial;max-width:620px;margin:70px auto"><h1>Mini Grid Studio</h1><p>'+ (sent?'E-mail de teste enviado para a conta do pedido.':'Este pedido já tem envio registrado; nenhum novo e-mail foi enviado.') +'</p></body></html>');
+  }
   return res.status(200).send('<html lang="pt-BR"><meta charset="utf-8"><title>Mini Grid Studio</title><body style="font:18px Arial;max-width:620px;margin:70px auto"><h1>Mini Grid Studio</h1><p>Gmail autorizado com sucesso.</p><p>A autorização foi armazenada de forma criptografada. O envio automático de pedidos ainda precisa ser testado antes da ativação.</p><a href="'+home+'">Voltar à loja</a></body></html>');
  }catch(e){console.error('Gmail OAuth callback failed',e.message);return res.status(502).send('Não foi possível concluir a conexão. Verifique as configurações e tente novamente.')}
 };
