@@ -17,7 +17,7 @@ module.exports=async function handler(req,res){
  if(!adminResponse.ok)return res.status(503).json({error:'Não foi possível verificar a permissão'});
  const admins=await adminResponse.json();
  if(!admins.length)return res.status(403).json({error:'Acesso restrito a administradores'});
- const ordersResponse=await fetch(base+'/rest/v1/orders?select=id,created_at,payment_status,fulfillment_status,shipping_service,shipping_cents,shipping_address,tracking_code,melhor_envio_shipment_id,shipping_label_status,shipping_label_url&payment_status=eq.approved&order=created_at.desc&limit=50',{headers});
+ const ordersResponse=await fetch(base+'/rest/v1/orders?select=id,created_at,payment_status,fulfillment_status,shipping_service,shipping_service_id,shipping_cents,shipping_address,tracking_code,melhor_envio_shipment_id,shipping_label_status,shipping_label_url&payment_status=eq.approved&order=created_at.desc&limit=50',{headers});
  if(!ordersResponse.ok)return res.status(502).json({error:'Falha ao consultar pedidos'});
  const orders=await ordersResponse.json();
  return res.status(200).json({orders:orders.map(o=>({...o,shipping_label_url:o.shipping_label_url||null,ready_for_label:o.payment_status==='approved'&&!o.melhor_envio_shipment_id}))});
