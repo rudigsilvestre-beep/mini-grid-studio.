@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/retry-approval-emails",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}
