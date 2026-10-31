@@ -24,11 +24,11 @@ module.exports=async function handler(req,res){
   const address=o.shipping_address||{};
   const missing=[];
   if(!Number.isInteger(o.shipping_service_id)||o.shipping_service_id<=0)missing.push('Código do serviço de frete');
-  if(!/^\\d{8}$/.test(String(address.postal_code||'').replace(/\\D/g,'')))missing.push('CEP de destino');
+  if(!/^\d{8}$/.test(String(address.postal_code||'').replace(/\D/g,'')))missing.push('CEP de destino');
   for(const [key,label] of [['name','Nome do destinatário'],['phone','Telefone'],['street','Rua'],['number','Número'],['district','Bairro'],['city','Cidade'],['state','UF']]){
     if(!String(address[key]||'').trim())missing.push(label);
   }
-  if(!/^\\d{11}$|^\\d{14}$/.test(String(address.document||'').replace(/\\D/g,'')))missing.push('CPF/CNPJ do destinatário (não coletado no checkout atual)');
+  if(!/^\d{11}$|^\d{14}$/.test(String(address.document||'').replace(/\D/g,'')))missing.push('CPF/CNPJ do destinatário (não coletado no checkout atual)');
   if(!process.env.MELHOR_ENVIO_TOKEN)missing.push('Integração Melhor Envio');
   if(!process.env.MELHOR_ENVIO_SENDER_DOCUMENT)missing.push('Documento do remetente (configuração segura pendente)');
   return {...o,shipping_label_url:o.shipping_label_url||null,missing_label_fields:missing,ready_for_label:o.payment_status==='approved'&&!o.melhor_envio_shipment_id&&missing.length===0};
