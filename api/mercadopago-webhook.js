@@ -21,6 +21,19 @@ async function dbRequest(table,method,query,body){
  if(!response.ok)throw Error('Database request failed: '+response.status);
  return response.json();
 }
+async function sendApprovalEmail(orderId){
+ const apiKey=process.env.RESEND_API_KEY,from=process.env.ORDER_EMAIL_FROM;
+ if(!apiKey||!from){console.info('Order email not configured');return}
+ const orders=await dbRequest('orders','GET','id=eq.'+encodeURIComponent(orderId)+'&select=id,payment_status,shipping_address,subtotal_cents,shipping_cents,total_cents',null);
+ const o=orders[0];if(!o||o.payment_status!=='approved')return;
+ const email=String(o.shipping_address?.email||'').trim();if(!/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(email))return;
+ const number=o.id.slice(0,8).toUpperCase();const money=c=>(Number(c||0)/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+ const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const html='<div style="font:16px Arial,sans-serif;max-width:600px;margin:auto;color:#171717"><h1>MINI GRID STUDIO</h1><h2>Pagamento aprovado!</h2><p>Seu pedido <strong>#'+esc(number)+'</strong> foi confirmado.</p><p>Produtos: '+money(o.subtotal_cents)+'<br>Frete: '+money(o.shipping_cents)+'<br><strong>Total: '+money(o.total_cents)+'</strong></p><p>Para acompanhar seu pedido, utilize o link privado salvo no navegador no momento da compra. Se precisar de ajuda, responda a este e-mail.</p><p>Obrigado por comprar na Mini Grid Studio.</p></div>';
+ const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+apiKey,'Content-Type':'application/json'},body:JSON.stringify({from,to:[email],subject:'Pagamento aprovado — Pedido #'+number+' | Mini Grid Studio',html,idempotency_key:'mini-grid-approved-'+o.id})});
+ if(!response.ok)throw Error('Email provider returned '+response.status);
+ console.info('Approval email accepted',{order:number});
+}
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method!=='POST')return json(res,405,{error:'Method not allowed'});
@@ -49,6 +62,6 @@ module.exports=async function handler(req,res){
   const status=statuses.includes(payment.status)?payment.status:'pending';
   if(order.payment_status==='approved'&&status!=='approved')return json(res,200,{ok:true});
   await dbRequest('orders','PATCH','id=eq.'+encodeURIComponent(order.id),{payment_id:id,payment_status:status,fulfillment_status:status==='approved'?'awaiting_fulfillment':'awaiting_payment',updated_at:new Date().toISOString()});
-  console.info('Webhook processed',{status});return json(res,200,{ok:true});
+  if(status==='approved'&&order.payment_status!=='approved'){try{await sendApprovalEmail(order.id)}catch(emailError){console.error('Approval email failed',emailError.message)}}console.info('Webhook processed',{status});return json(res,200,{ok:true});
  }catch(err){console.error('Payment webhook processing failed',err.message);return json(res,500,{error:'Processing failed'})}
 };
