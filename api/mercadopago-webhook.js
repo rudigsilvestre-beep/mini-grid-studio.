@@ -29,9 +29,11 @@ module.exports=async function handler(req,res){
  if(!secret||!token||!process.env.SUPABASE_SECRET_KEY||!process.env.SUPABASE_URL)return json(res,503,{error:'Webhook not configured'});
  const eventType=String(req.body?.type||req.query?.type||req.query?.topic||'');
  if(eventType&&eventType!=='payment'){console.info('Webhook ignored: non-payment event',{type:eventType});return json(res,200,{ok:true,ignored:true});}
- const id=String(req.query?.['data.id']||req.body?.data?.id||req.query?.id||req.body?.id||'');
+ const rawUrl=new URL(req.url,'https://mini-grid-studio-site.vercel.app');
+ const queryId=rawUrl.searchParams.get('data.id')||rawUrl.searchParams.get('data_id');
+ const id=String(queryId||req.query?.['data.id']||req.body?.data?.id||req.query?.id||req.body?.id||'');
  if(!/^\d{1,25}$/.test(id)){console.warn('Webhook rejected: invalid payment id',{type:req.body?.type,action:req.body?.action,hasQueryId:Boolean(req.query?.['data.id']),hasBodyId:Boolean(req.body?.data?.id)});return json(res,400,{error:'Invalid payment id'});}
- if(!validSignature(req,secret,id)){console.warn('Webhook rejected: signature mismatch',{hasSignature:Boolean(req.headers['x-signature']),hasRequestId:Boolean(req.headers['x-request-id'])});return json(res,401,{error:'Invalid signature'});}
+ if(!validSignature(req,secret,id)){console.warn('Webhook rejected: signature mismatch',{hasSignature:Boolean(req.headers['x-signature']),hasRequestId:Boolean(req.headers['x-request-id']),queryIdPresent:Boolean(queryId),idSource:queryId?'url':req.query?.['data.id']?'query':'body',eventType,secretLength:secret.length,signatureTimestampDigits:String(req.headers['x-signature']||'').match(/(?:^|,)\s*ts=([^,]+)/)?.[1]?.trim().length||0});return json(res,401,{error:'Invalid signature'});}
  try{
   const paymentResponse=await fetch('https://api.mercadopago.com/v1/payments/'+encodeURIComponent(id),{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
   if(!paymentResponse.ok)throw Error('Payment verification failed: '+paymentResponse.status);
