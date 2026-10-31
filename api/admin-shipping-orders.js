@@ -28,9 +28,9 @@ module.exports=async function handler(req,res){
   for(const [key,label] of [['name','Nome do destinatário'],['phone','Telefone'],['street','Rua'],['number','Número'],['district','Bairro'],['city','Cidade'],['state','UF']]){
     if(!String(address[key]||'').trim())missing.push(label);
   }
-  if(!/^\d{11}$|^\d{14}$/.test(String(address.document||'').replace(/\D/g,'')))missing.push('CPF/CNPJ do destinatário (não coletado no checkout atual)');
+  if(!/^\d{11}$|^\d{14}$/.test(String(address.document||'').replace(/\D/g,'')))missing.push('CPF/CNPJ do destinatário (ausente neste pedido)');
   if(!process.env.MELHOR_ENVIO_TOKEN)missing.push('Integração Melhor Envio');
-  if(!process.env.MELHOR_ENVIO_SENDER_DOCUMENT)missing.push('Documento do remetente (configuração segura pendente)');
+  if(!process.env.MELHOR_ENVIO_SENDER_DOCUMENT)missing.push('CPF do remetente (configuração segura pendente)');
   for(const [key,label] of [['MELHOR_ENVIO_SENDER_NAME','Nome do remetente'],['MELHOR_ENVIO_SENDER_PHONE','Telefone do remetente'],['MELHOR_ENVIO_SENDER_EMAIL','E-mail do remetente'],['MELHOR_ENVIO_SENDER_ADDRESS','Endereço do remetente'],['MELHOR_ENVIO_SENDER_NUMBER','Número do remetente'],['MELHOR_ENVIO_SENDER_DISTRICT','Bairro do remetente'],['MELHOR_ENVIO_SENDER_CITY','Cidade do remetente'],['MELHOR_ENVIO_SENDER_STATE','UF do remetente']]){if(!process.env[key])missing.push(label+' (configuração pendente)')}
   return {...o,shipping_label_url:o.shipping_label_url||null,missing_label_fields:missing,ready_for_label:o.payment_status==='approved'&&!o.melhor_envio_shipment_id&&missing.length===0};
  })});
