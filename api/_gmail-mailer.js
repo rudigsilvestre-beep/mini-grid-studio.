@@ -13,6 +13,10 @@ async function sendApprovalEmail(orderId){
  const o=orders[0];if(!o||o.payment_status!=='approved'||o.approval_email_sent_at)return false;
  const recipient=String(o.shipping_address?.email||'').trim();
  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient))throw Error('Invalid customer email');
+ const claim=await fetch(process.env.SUPABASE_URL+'/rest/v1/rpc/claim_approval_email',{method:'POST',headers:{apikey:process.env.SUPABASE_SECRET_KEY,Authorization:'Bearer '+process.env.SUPABASE_SECRET_KEY,'Content-Type':'application/json'},body:JSON.stringify({p_order_id:o.id})});
+ if(!claim.ok)throw Error('Email claim failed '+claim.status);
+ if((await claim.json())!==true)return false;
+ try{
  const creds=await db('gmail_oauth_credentials','account_email=eq.'+encodeURIComponent(sender.toLowerCase())+'&select=refresh_token_ciphertext');
  if(creds.length!==1)throw Error('Gmail authorization missing');
  const encrypted=Buffer.from(creds[0].refresh_token_ciphertext,'base64');
@@ -36,5 +40,9 @@ async function sendApprovalEmail(orderId){
  if(!sent.ok)throw Error('Gmail send failed '+sent.status);
  await db('orders','id=eq.'+encodeURIComponent(o.id),'PATCH',{approval_email_sent_at:new Date().toISOString()});
  console.info('Gmail approval email sent',{order:number});return true;
+ }catch(error){
+  try{await db('orders','id=eq.'+encodeURIComponent(o.id)+'&approval_email_sent_at=is.null','PATCH',{approval_email_last_error:String(error.message).slice(0,250)})}catch(e){console.error('Email error log failed',e.message)}
+  throw error;
+ }
 }
 module.exports={sendApprovalEmail};
