@@ -3,7 +3,7 @@ module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method!=='GET')return res.status(405).json({error:'Método não permitido'});
  const token=String(req.query?.token||'');
- const signed=/^v1\\.([0-9a-f-]{36})\\.([a-f0-9]{64})$/.exec(token);
+ const signed=/^v1\.([0-9a-f-]{36})\.([a-f0-9]{64})$/.exec(token);
  if(!signed&&!/^[a-f0-9]{64}$/.test(token))return res.status(400).json({error:'Link inválido'});
  if(signed){
   const secret=process.env.GOOGLE_CLIENT_SECRET;if(!secret)return res.status(503).json({error:'Serviço indisponível'});
