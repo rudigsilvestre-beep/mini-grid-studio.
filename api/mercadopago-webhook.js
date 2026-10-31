@@ -28,18 +28,18 @@ module.exports=async function handler(req,res){
  const token=process.env.MERCADO_PAGO_ACCESS_TOKEN;
  if(!secret||!token||!process.env.SUPABASE_SECRET_KEY||!process.env.SUPABASE_URL)return json(res,503,{error:'Webhook not configured'});
  const id=String(req.query?.['data.id']||req.body?.data?.id||'');
- if(!/^\d{1,25}$/.test(id))return json(res,400,{error:'Invalid payment id'});
- if(!validSignature(req,secret,id))return json(res,401,{error:'Invalid signature'});
+ if(!/^\d{1,25}$/.test(id)){console.warn('Webhook rejected: invalid payment id',{type:req.body?.type,action:req.body?.action,hasQueryId:Boolean(req.query?.['data.id']),hasBodyId:Boolean(req.body?.data?.id)});return json(res,400,{error:'Invalid payment id'});}
+ if(!validSignature(req,secret,id)){console.warn('Webhook rejected: signature mismatch',{hasSignature:Boolean(req.headers['x-signature']),hasRequestId:Boolean(req.headers['x-request-id'])});return json(res,401,{error:'Invalid signature'});}
  try{
   const paymentResponse=await fetch('https://api.mercadopago.com/v1/payments/'+encodeURIComponent(id),{headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
   if(!paymentResponse.ok)throw Error('Payment verification failed');
   const payment=await paymentResponse.json();
   if(String(payment.id)!==id||!String(payment.external_reference||'').startsWith('mini-grid-'))return json(res,400,{error:'Unrecognized payment'});
   const orders=await dbRequest('orders','GET','external_reference=eq.'+encodeURIComponent(payment.external_reference)+'&select=id,total_cents,payment_id,payment_status',null);
-  if(orders.length!==1)return json(res,409,{error:'Order not found'});
+  if(orders.length!==1){console.warn('Webhook rejected: order not found');return json(res,409,{error:'Order not found'});}
   const order=orders[0];
   const paid=Math.round(Number(payment.transaction_amount)*100);
-  if(!Number.isSafeInteger(paid)||paid!==order.total_cents||payment.currency_id!=='BRL')return json(res,409,{error:'Amount mismatch'});
+  if(!Number.isSafeInteger(paid)||paid!==order.total_cents||payment.currency_id!=='BRL'){console.warn('Webhook rejected: amount mismatch',{paid,expected:order.total_cents,currency:payment.currency_id});return json(res,409,{error:'Amount mismatch'});}
   if(order.payment_id&&String(order.payment_id)!==id)return json(res,409,{error:'Payment mismatch'});
   const statuses=['approved','pending','in_process','rejected','cancelled','refunded','charged_back','authorized'];
   const status=statuses.includes(payment.status)?payment.status:'pending';
