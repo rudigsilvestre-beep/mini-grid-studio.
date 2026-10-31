@@ -15,7 +15,7 @@ module.exports=async function handler(req,res){
  const hash=crypto.createHash('sha256').update(token).digest('hex');
  const headers={apikey:key,Authorization:'Bearer '+key,Accept:'application/json'};
  try{
-  const r=await fetch(url+'/rest/v1/orders?tracking_token_hash=eq.'+hash+'&select=id,created_at,payment_status,fulfillment_status,tracking_code,shipping_service,subtotal_cents,shipping_cents,total_cents',{headers});
+  const r=await fetch(url+'/rest/v1/orders?'+(signed?'id=eq.'+encodeURIComponent(signed[1]):'tracking_token_hash=eq.'+hash)+'&select=id,created_at,payment_status,fulfillment_status,tracking_code,shipping_service,subtotal_cents,shipping_cents,total_cents',{headers});
   if(!r.ok)throw Error('Order lookup '+r.status);
   const orders=await r.json();
   if(orders.length!==1)return res.status(404).json({error:'Pedido não encontrado'});
