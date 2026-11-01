@@ -45,4 +45,23 @@ async function sendApprovalEmail(orderId){
   throw error;
  }
 }
-module.exports={sendApprovalEmail};
+async function sendTransactionalEmail(recipient,subject,html){
+ const secret=process.env.GOOGLE_CLIENT_SECRET,id=process.env.GOOGLE_CLIENT_ID,sender=process.env.GMAIL_SENDER;
+ if(!secret||!id||!sender)throw Error('Gmail credentials missing');
+ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient)||/[\r\n]/.test(recipient+subject))throw Error('Invalid email');
+ const creds=await db('gmail_oauth_credentials','account_email=eq.'+encodeURIComponent(sender.toLowerCase())+'&select=refresh_token_ciphertext');
+ if(creds.length!==1)throw Error('Gmail authorization missing');
+ const encrypted=Buffer.from(creds[0].refresh_token_ciphertext,'base64');
+ const key=crypto.createHash('sha256').update(secret).digest();
+ const decipher=crypto.createDecipheriv('aes-256-gcm',key,encrypted.subarray(0,12));
+ decipher.setAuthTag(encrypted.subarray(12,28));
+ const refreshToken=Buffer.concat([decipher.update(encrypted.subarray(28)),decipher.final()]).toString('utf8');
+ const auth=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:id,client_secret:secret,refresh_token:refreshToken,grant_type:'refresh_token'})});
+ if(!auth.ok)throw Error('Gmail token refresh failed '+auth.status);
+ const access=(await auth.json()).access_token;if(!access)throw Error('Gmail access token missing');
+
+ const message=['From: Mini Grid Studio <'+sender+'>','To: '+recipient,'Subject: =?UTF-8?B?'+Buffer.from(subject).toString('base64')+'?=','MIME-Version: 1.0','Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',Buffer.from(html).toString('base64')].join('\r\n');
+ const r=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+access,'Content-Type':'application/json'},body:JSON.stringify({raw:Buffer.from(message).toString('base64url')})});
+ if(!r.ok)throw Error('Gmail send failed '+r.status);
+}
+module.exports={sendApprovalEmail,sendTransactionalEmail};

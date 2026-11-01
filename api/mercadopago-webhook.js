@@ -40,7 +40,7 @@ module.exports=async function handler(req,res){
   if(!paymentResponse.ok)throw Error('Payment verification failed: '+paymentResponse.status);
   const payment=await paymentResponse.json();
   if(String(payment.id)!==id||!String(payment.external_reference||'').startsWith('mini-grid-')){console.warn('Webhook rejected: unrecognized payment');return json(res,400,{error:'Unrecognized payment'});}
-  const orders=await dbRequest('orders','GET','external_reference=eq.'+encodeURIComponent(payment.external_reference)+'&select=id,total_cents,payment_id,payment_status',null);
+  const orders=await dbRequest('orders','GET','external_reference=eq.'+encodeURIComponent(payment.external_reference)+'&select=id,total_cents,payment_id,payment_status,fulfillment_status',null);
   if(orders.length!==1){console.warn('Webhook rejected: order not found');return json(res,409,{error:'Order not found'});}
   const order=orders[0];
   const paid=Math.round(Number(payment.transaction_amount)*100);
@@ -48,8 +48,8 @@ module.exports=async function handler(req,res){
   if(order.payment_id&&String(order.payment_id)!==id){console.warn('Webhook rejected: payment mismatch');return json(res,409,{error:'Payment mismatch'});}
   const statuses=['approved','pending','in_process','rejected','cancelled','refunded','charged_back','authorized'];
   const status=statuses.includes(payment.status)?payment.status:'pending';
-  if(order.payment_status==='approved'&&status!=='approved')return json(res,200,{ok:true});
-  await dbRequest('orders','PATCH','id=eq.'+encodeURIComponent(order.id),{payment_id:id,payment_status:status,fulfillment_status:status==='approved'?'awaiting_fulfillment':'awaiting_payment',updated_at:new Date().toISOString()});
+  if(order.payment_status===status||order.payment_status==='approved'&&['pending','in_process','authorized','rejected','cancelled'].includes(status))return json(res,200,{ok:true});
+  await dbRequest('orders','PATCH','id=eq.'+encodeURIComponent(order.id)+'&payment_status=eq.'+encodeURIComponent(order.payment_status)+'&fulfillment_status=eq.'+encodeURIComponent(order.fulfillment_status),{payment_id:id,payment_status:status,fulfillment_status:status==='approved'?(order.payment_status==='approved'?order.fulfillment_status:'awaiting_fulfillment'):order.fulfillment_status,updated_at:new Date().toISOString()});
   if(status==='approved'){try{await sendApprovalEmail(order.id)}catch(emailError){console.error('Approval email failed',emailError.message)}}console.info('Webhook processed',{status});return json(res,200,{ok:true});
  }catch(err){console.error('Payment webhook processing failed',err.message);return json(res,500,{error:'Processing failed'})}
 };

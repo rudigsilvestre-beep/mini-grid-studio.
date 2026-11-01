@@ -14,7 +14,7 @@ module.exports=async function handler(req,res){
   if(!p.ok){console.error('Reconcile payment lookup failed',p.status);return res.status(502).json({error:'Payment lookup unavailable'});}
   const payment=await p.json();
   if(String(payment.id)!==id||payment.external_reference!==reference||payment.currency_id!=='BRL')return res.status(409).json({error:'Payment reference mismatch'});
-  const q=await fetch(url+'/rest/v1/orders?external_reference=eq.'+encodeURIComponent(reference)+'&select=id,total_cents,payment_id,payment_status',{headers});
+  const q=await fetch(url+'/rest/v1/orders?external_reference=eq.'+encodeURIComponent(reference)+'&select=id,total_cents,payment_id,payment_status,fulfillment_status',{headers});
   if(!q.ok){console.error('Reconcile order lookup failed',q.status);return res.status(502).json({error:'Order lookup unavailable'});}
   const orders=await q.json();
   if(orders.length!==1)return res.status(404).json({error:'Order not found'});
@@ -23,8 +23,8 @@ module.exports=async function handler(req,res){
   if(order.payment_id&&String(order.payment_id)!==id)return res.status(409).json({error:'Payment ID mismatch'});
   const allowed=['approved','pending','in_process','rejected','cancelled','refunded','charged_back','authorized'];
   const status=allowed.includes(payment.status)?payment.status:'pending';
-  if(order.payment_status==='approved'&&status!=='approved')return res.status(200).json({status:'approved'});
-  const patch=await fetch(url+'/rest/v1/orders?id=eq.'+encodeURIComponent(order.id),{method:'PATCH',headers,body:JSON.stringify({payment_id:id,payment_status:status,fulfillment_status:status==='approved'?'awaiting_fulfillment':'awaiting_payment',updated_at:new Date().toISOString()})});
+  if(order.payment_status===status||order.payment_status==='approved'&&['pending','in_process','authorized','rejected','cancelled'].includes(status))return res.status(200).json({status:order.payment_status});
+  const patch=await fetch(url+'/rest/v1/orders?id=eq.'+encodeURIComponent(order.id)+'&payment_status=eq.'+encodeURIComponent(order.payment_status)+'&fulfillment_status=eq.'+encodeURIComponent(order.fulfillment_status),{method:'PATCH',headers,body:JSON.stringify({payment_id:id,payment_status:status,fulfillment_status:status==='approved'?(order.payment_status==='approved'?order.fulfillment_status:'awaiting_fulfillment'):order.fulfillment_status,updated_at:new Date().toISOString()})});
   if(!patch.ok){console.error('Reconcile update failed',patch.status);return res.status(502).json({error:'Order update unavailable'});}
   console.info('Payment reconciled',{status});
   return res.status(200).json({status});
