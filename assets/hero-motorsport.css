@@ -1,0 +1,14 @@
+
+.hero.hero-motorsport{position:relative;isolation:isolate;display:flex;align-items:center;min-height:600px;height:min(760px,49vw);background:#202221;overflow:hidden;color:#fff}
+.hero-motorsport .hero-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;z-index:-3}
+.hero-motorsport:after{content:"";position:absolute;inset:0;z-index:-2;background:linear-gradient(90deg,rgba(9,12,12,.6),rgba(9,12,12,.22) 36%,transparent 62%)}
+.hero-motorsport .hero-copy{padding:65px 0 85px 6%;width:44%;max-width:690px;display:block}
+.hero-motorsport .eyebrow{font-size:9px;letter-spacing:2.6px;color:#d0d2d0;line-height:1.8}
+.hero-motorsport h1{font-size:clamp(39px,4.15vw,72px);font-weight:500;letter-spacing:-2.8px;line-height:1.06;margin:25px 0 22px;text-wrap:balance}
+.hero-motorsport h1 em{font-family:Georgia,"Times New Roman",serif;font-weight:400;letter-spacing:-2px}
+.hero-motorsport p{font-size:13px;line-height:1.8;color:#d1d3d1;max-width:310px;margin:0}
+.hero-motorsport .cta{gap:26px;padding:16px 22px;margin-top:29px;background:#fff;color:#171717;border:1px solid #fff;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;border-radius:0;transition:background .2s,color .2s}
+.hero-motorsport .cta:hover{background:transparent;color:white}.hero-motorsport .cta:focus-visible{outline:2px solid white;outline-offset:5px}
+.hero-caption{position:absolute;bottom:27px;right:6%;font-size:8px;letter-spacing:2px;color:#dededb}.hero-caption span{padding:0 14px;color:#999}
+@media(max-width:800px){.hero.hero-motorsport{min-height:690px;height:calc(90svh - 105px);max-height:850px;align-items:flex-start}.hero-motorsport .hero-photo{object-fit:cover;object-position:65% bottom;height:57%;top:auto;bottom:0}.hero-motorsport:after{background:linear-gradient(180deg,#202221 0%,#202221 36%,rgba(32,34,33,.82) 46%,transparent 66%)}.hero-motorsport .hero-copy{width:100%;max-width:none;padding:40px 6% 0}.hero-motorsport h1{font-size:clamp(39px,7.8vw,60px);letter-spacing:-1.9px;line-height:1.03;margin:20px 0 16px}.hero-motorsport h1 em br{display:none}.hero-motorsport p{max-width:340px;font-size:12px;line-height:1.7}.hero-motorsport .cta{margin-top:20px;padding:14px 20px}.hero-caption{bottom:18px;right:6%;left:6%;text-align:right;font-size:7px;letter-spacing:1.3px}.hero-motorsport .eyebrow{font-size:8px;letter-spacing:2px}}
+@media(prefers-reduced-motion:reduce){.hero-motorsport .cta{transition:none}}
