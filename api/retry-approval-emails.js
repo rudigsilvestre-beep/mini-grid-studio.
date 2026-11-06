@@ -1,4 +1,5 @@
 const {sendApprovalEmail}=require('./_gmail-mailer');
+const {dispatch}=require('./_launch-alerts');
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method!=='GET')return res.status(405).json({error:'Method not allowed'});
@@ -17,6 +18,7 @@ module.exports=async function handler(req,res){
    try{if(await sendApprovalEmail(row.id))sent++;else skipped++}
    catch(e){failed++;console.error('Email retry failed',{order:row.id.slice(0,8),error:e.message})}
   }
-  return res.status(200).json({ok:true,checked:rows.length,sent,failed,skipped});
+  const launches=await dispatch();
+  return res.status(200).json({ok:true,checked:rows.length,sent,failed,skipped,launches});
  }catch(e){console.error('Email retry job failed',e.message);return res.status(500).json({error:'Retry unavailable'})}
 };
