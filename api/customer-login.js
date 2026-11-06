@@ -3,7 +3,7 @@ const {sendTransactionalEmail}=require('./_gmail-mailer');
 module.exports=async(req,res)=>{
  res.setHeader('Cache-Control','no-store');
  if(req.method!=='POST')return res.status(405).json({error:'Método não permitido'});
- if(req.headers.origin&&req.headers.origin!=='https://mini-grid-studio-site.vercel.app')return res.status(403).json({error:'Origem inválida'});
+ if(req.headers.origin&&!['https://mini-grid-studio-site.vercel.app','https://minigridstudio.com.br','https://www.minigridstudio.com.br'].includes(req.headers.origin))return res.status(403).json({error:'Origem inválida'});
  const email=String(req.body?.email||'').trim().toLowerCase();
  if(email.length>180||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return res.status(400).json({error:'Informe um e-mail válido.'});
  const base=process.env.SUPABASE_URL,key=process.env.SUPABASE_SECRET_KEY;

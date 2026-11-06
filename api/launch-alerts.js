@@ -23,7 +23,7 @@ module.exports=async(req,res)=>{
    if(!availableProduct())return res.status(409).json({error:'O Racing nº 57 ainda não está disponível no catálogo.'});
    return res.status(200).json(await dispatch());
   }
-  if(req.headers.origin&&req.headers.origin!==origin)return res.status(403).json({error:'Origem inválida.'});
+  if(req.headers.origin&&![origin,'https://minigridstudio.com.br','https://www.minigridstudio.com.br'].includes(req.headers.origin))return res.status(403).json({error:'Origem inválida.'});
   if(req.body?.website)return res.status(200).json({ok:true});
   const email=String(req.body?.email||'').trim().toLowerCase();
   if(email.length>180||!/^[^@\s<>\r\n]+@[^@\s<>\r\n]+\.[^@\s<>\r\n]+$/.test(email))return res.status(400).json({error:'Informe um e-mail válido.'});
