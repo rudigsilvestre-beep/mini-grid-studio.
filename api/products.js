@@ -1,1 +1,0 @@
-const {catalog}=require('./_products');module.exports=async(req,res)=>{res.setHeader('Cache-Control','no-store');if(req.method!=='GET')return res.status(405).json({error:'Método não permitido'});try{return res.status(200).json({products:Object.values(await catalog()).filter(p=>p.active)})}catch(e){return res.status(503).json({error:'Catálogo temporariamente indisponível'})}};
